@@ -281,6 +281,20 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
 }
 
 @ContextDsl
+inline fun <reified LOCATION : Any> Route.post(
+    metadata: Metadata,
+    noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
+): Route {
+    application.swaggerUi.apply {
+        metadata.apply<LOCATION, Unit>(HttpMethod.Post)
+    }
+
+    return post<LOCATION> {
+        body(this, it)
+    }
+}
+
+@ContextDsl
 inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.patch(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
