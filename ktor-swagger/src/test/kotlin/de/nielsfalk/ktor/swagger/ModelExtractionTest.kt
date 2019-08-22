@@ -340,6 +340,23 @@ class ModelExtractionTest {
         property.`$ref`.should.equal("#/definitions/GenericSubModelTwoGenericsOfStringAndInt")
     }
 
+    class AnnotatedModel(
+        @Description("String theory")
+        val value1: String,
+        @Description("Could be quite high")
+        @DefaultValue("9032")
+        val value2: Int
+    )
+
+    @Test
+    fun `property annotations`() {
+        val model = createModelData(typeInfo<AnnotatedModel>()).first as ObjectModel
+
+        model.properties["value1"]!!.description.should.equal("String theory")
+        model.properties["value2"]!!.description.should.equal("Could be quite high")
+        model.properties["value2"]!!.default.should.equal("9032")
+    }
+
     class Parameters(
         val optional: String?,
         val mandatory: String,

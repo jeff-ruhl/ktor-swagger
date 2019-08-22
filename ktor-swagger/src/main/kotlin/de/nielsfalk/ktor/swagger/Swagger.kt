@@ -120,8 +120,12 @@ internal class SpecVariation(
                 )
         }
 
-    fun <T, R> KProperty1<T, R>.toModelProperty(reifiedType: Type? = null): Pair<Property, Collection<TypeInfo>> =
-        returnType.toModelProperty(reifiedType)
+    fun <T, R> KProperty1<T, R>.toModelProperty(reifiedType: Type? = null): Pair<Property, Collection<TypeInfo>> {
+        val (property, types) = returnType.toModelProperty(reifiedType)
+        val description = findAnnotation<Description>()
+        val defaultValue = findAnnotation<DefaultValue>()
+        return property.copy(description = description?.description, default = defaultValue?.value) to types
+    }
 
     fun KType.toModelProperty(reifiedType: Type?): Pair<Property, Collection<TypeInfo>> =
         resolveTypeInfo(reifiedType).let { typeInfo ->
