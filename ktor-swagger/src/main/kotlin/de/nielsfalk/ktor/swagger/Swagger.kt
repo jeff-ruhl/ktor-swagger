@@ -31,6 +31,7 @@ import kotlin.reflect.KClassifier
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
 import kotlin.reflect.KTypeParameter
+import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
@@ -149,7 +150,7 @@ internal class SpecVariation(
                     is KTypeParameter -> {
                         reifiedType!!.actualTypeArguments.first().toKType()
                     }
-                    else -> unsuportedType(returnTypeClassifier)
+                    else -> unsupportedType(returnTypeClassifier)
                 }
                 val classifier = returnArgumentType?.classifier
                 if (classifier.isCollectionType) {
@@ -198,10 +199,10 @@ internal class SpecVariation(
                                     val kClass = (nextParameterizedType.rawType as Class<*>).kotlin
                                     kClass.toModelProperty(reifiedType = nextParameterizedType)
                                 }
-                                else -> unsuportedType(nextParameterizedType)
+                                else -> unsupportedType(nextParameterizedType)
                             }
                         }
-                        else -> unsuportedType(classifier)
+                        else -> unsupportedType(classifier)
                     }
                     Property(items = items.first, type = "array") to items.second
                 }
@@ -237,9 +238,16 @@ internal class SpecVariation(
         val collectedClassesToRegister = mutableListOf<TypeInfo>()
         val properties = typeInfo.type.memberProperties.mapNotNull {
             if (it.findAnnotation<Ignore>() != null) return@mapNotNull null
-            val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
-            collectedClassesToRegister.addAll(propertiesWithCollected.second)
-            it.name to propertiesWithCollected.first
+            val rawType = it.findAnnotation<de.nielsfalk.ktor.swagger.Schema>()
+            if (rawType != null) {
+                val property = rawType.generator.objectInstance?.generateSchema() ?: rawType.generator.createInstance().generateSchema()
+                it.name to property
+            }
+            else {
+                val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
+                collectedClassesToRegister.addAll(propertiesWithCollected.second)
+                it.name to propertiesWithCollected.first
+            }
         }.toMap()
 
         return properties to collectedClassesToRegister
@@ -299,14 +307,14 @@ internal fun KType.resolveTypeInfo(reifiedType: Type?): TypeInfo? {
         is KClass<*> -> {
             this.parameterize(reifiedType)?.let { TypeInfo(classifierLocal, it) }
         }
-        else -> unsuportedType(classifierLocal)
+        else -> unsupportedType(classifierLocal)
     }
 }
 
 internal fun Type.rawKotlinKClass() = when (this) {
     is Class<*> -> this.kotlin
     is ParameterizedType -> (this.rawType as Class<*>).kotlin
-    else -> unsuportedType(this)
+    else -> unsupportedType(this)
 }
 
 private fun KType.parameterize(reifiedType: Type?): ParameterizedType? =
@@ -349,7 +357,7 @@ internal fun TypeInfo.modelName(): ModelName {
                         is WildcardType -> {
                             (it.upperBounds.first() as Class<*>).kotlin.modelName()
                         }
-                        else -> unsuportedType(it)
+                        else -> unsupportedType(it)
                     }
                 }
                 .joinToString(separator = "And") { it }
@@ -360,6 +368,6 @@ internal fun TypeInfo.modelName(): ModelName {
     }
 }
 
-private inline fun unsuportedType(type: Any?): Nothing {
+private fun unsupportedType(type: Any?): Nothing {
     throw IllegalStateException("Unknown type ${type?.let { it::class }} $type")
 }

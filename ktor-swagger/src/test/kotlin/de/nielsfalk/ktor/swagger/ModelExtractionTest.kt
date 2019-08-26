@@ -426,6 +426,28 @@ class ModelExtractionTest {
         assertEqualTypeInfo(typeInfo<Int>(), jValueType)
         assertEqualTypeInfo(typeInfo<String>(), kValueType)
     }
+
+    object CustomSchemaGenerator : SchemaGenerator {
+        override fun generateSchema(): Property {
+            return Property(type = "string", enum = listOf("all", "day", "long"))
+        }
+    }
+
+    class CustomSchema(
+        @Schema(generator = CustomSchemaGenerator::class)
+        val field1: Any
+    )
+
+    @Test
+    fun `custom schema for property`() {
+        val typeInfo = typeInfo<CustomSchema>()
+        val model = createModelData(typeInfo).first as ObjectModel
+
+        model.properties["field1"]!!.apply {
+            type.should.equal("string")
+            enum.should.elements("all", "day", "long")
+        }
+    }
 }
 
 fun assertEqualTypeInfo(expected: TypeInfo, actual: TypeInfo) {
