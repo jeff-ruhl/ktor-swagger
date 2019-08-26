@@ -146,6 +146,7 @@ data class Property(
     val items: Property? = null,
     val description: String? = null,
     val default: String? = null,
+    val additionalProperties: Map<String, Property>? = null,
     override val `$ref`: String? = null
 ) : RefHolder
 

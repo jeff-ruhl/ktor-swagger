@@ -165,47 +165,19 @@ internal class SpecVariation(
                     )
                     Property(items = items.first, type = "array") to items.second
                 } else {
-                    /*
-                     * Handle the case of a collection that holds the type directly.
-                     * For example: List<String> or List<T>
-                     */
-                    val items = when (classifier) {
-                        is KClass<*> -> {
-                            /*
-                             * The type is explicit.
-                             * For example: List<String>.
-                             * classifier would be String::class.
-                             */
-                            classifier.toModelProperty()
-                        }
-                        is KTypeParameter -> {
-                            /*
-                             * The case that we need to figure out what the reified generic type is.
-                             * For example: List<T>
-                             * Need to figure out what the next level generic type would be.
-                             */
-                            val nextParameterizedType = reifiedType?.actualTypeArguments?.first()
-                            when (nextParameterizedType) {
-                                is Class<*> -> {
-                                    /*
-                                     * The type the collection is holding type is encoded in the reified type information.
-                                     */
-                                    nextParameterizedType.kotlin.toModelProperty()
-                                }
-                                is ParameterizedType -> {
-                                    /*
-                                     * The type the collection is holding is generic.
-                                     */
-                                    val kClass = (nextParameterizedType.rawType as Class<*>).kotlin
-                                    kClass.toModelProperty(reifiedType = nextParameterizedType)
-                                }
-                                else -> unsupportedType(nextParameterizedType)
-                            }
-                        }
-                        else -> unsupportedType(classifier)
-                    }
+                    val items = extractCollectionParameters(classifier, reifiedType)
                     Property(items = items.first, type = "array") to items.second
                 }
+            } else if (returnType != null && this.isSubclassOf(Map::class)) {
+                val (keyType, valueType) = returnType.arguments
+                require(keyType.type?.classifier == String::class) { "Maps must have string keys" }
+                val valueClassifier = valueType.type?.classifier
+                val (valueProperty, collectedTypes) = when (valueClassifier) {
+                    is KClass<*> -> valueClassifier.toModelProperty()
+                    else -> unsupportedType(valueClassifier)
+                }
+                val additionalProperties = mapOf("type" to valueProperty)
+                Property(additionalProperties = additionalProperties, type = "object") to collectedTypes
             } else if (java.isEnum) {
                 val enumConstants = (this).java.enumConstants
                 Property(
@@ -219,6 +191,51 @@ internal class SpecVariation(
                 }
                 typeInfo.referenceProperty() to listOf(typeInfo)
             }
+    }
+
+    /**
+     * Handle the case of a collection that holds the type directly.
+     * For example: List<String> or List<T>
+     */
+    private fun KClass<*>.extractCollectionParameters(
+        classifier: KClassifier?,
+        reifiedType: ParameterizedType?
+    ): Pair<Property, Collection<TypeInfo>> {
+        return when (classifier) {
+            is KClass<*> -> {
+                /*
+                 * The type is explicit.
+                 * For example: List<String>.
+                 * classifier would be String::class.
+                 */
+                classifier.toModelProperty()
+            }
+            is KTypeParameter -> {
+                /*
+                 * The case that we need to figure out what the reified generic type is.
+                 * For example: List<T>
+                 * Need to figure out what the next level generic type would be.
+                 */
+                val nextParameterizedType = reifiedType?.actualTypeArguments?.first()
+                when (nextParameterizedType) {
+                    is Class<*> -> {
+                        /*
+                         * The type the collection is holding type is encoded in the reified type information.
+                         */
+                        nextParameterizedType.kotlin.toModelProperty()
+                    }
+                    is ParameterizedType -> {
+                        /*
+                         * The type the collection is holding is generic.
+                         */
+                        val kClass = (nextParameterizedType.rawType as Class<*>).kotlin
+                        kClass.toModelProperty(reifiedType = nextParameterizedType)
+                    }
+                    else -> unsupportedType(nextParameterizedType)
+                }
+            }
+            else -> unsupportedType(classifier)
+        }
     }
 
     fun createModelData(typeInfo: TypeInfo): ModelDataWithDiscoveredTypeInfo {

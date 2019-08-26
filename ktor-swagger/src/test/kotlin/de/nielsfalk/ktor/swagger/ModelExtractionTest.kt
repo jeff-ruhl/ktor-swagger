@@ -6,6 +6,7 @@ import de.nielsfalk.ktor.swagger.version.v2.Parameter
 import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
 import org.junit.Test
+import java.lang.IllegalArgumentException
 import java.time.Instant
 import java.time.LocalDate
 import kotlin.reflect.full.memberProperties
@@ -338,6 +339,38 @@ class ModelExtractionTest {
         )
         val property = (modelWithDiscovered.first as ObjectModel).properties["subModelElement"]!!
         property.`$ref`.should.equal("#/definitions/GenericSubModelTwoGenericsOfStringAndInt")
+    }
+
+    class NestedMapType(
+        val nestedPrimitiveMap: Map<String, String>,
+        val nestedObjectMap: Map<String, Property>
+    )
+
+    @Test
+    fun `nested map type`() {
+        val (model, discovered) = createModelData(typeInfo<NestedMapType>())
+        assertEqualTypeInfo(
+            typeInfo<Property>(),
+            discovered.first()
+        )
+
+        (model as ObjectModel).properties["nestedPrimitiveMap"]!!.additionalProperties!!["type"]!!.apply {
+            type.should.equal("string")
+            `$ref`.should.`null`
+        }
+        model.properties["nestedObjectMap"]!!.additionalProperties!!["type"]!!.apply {
+            type.should.`null`
+            `$ref`.should.equal("#/definitions/Property")
+        }
+    }
+
+    class NonStringKeyNestedMap(
+        val woah: Map<Int, Boolean>
+    )
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `map type with non-string key`() {
+        createModelData(typeInfo<NonStringKeyNestedMap>())
     }
 
     class AnnotatedModel(
