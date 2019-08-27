@@ -23,8 +23,7 @@ import io.ktor.locations.put
 import io.ktor.util.pipeline.ContextDsl
 import io.ktor.util.pipeline.PipelineContext
 import io.ktor.request.receive
-import io.ktor.routing.Route
-import io.ktor.routing.application
+import io.ktor.routing.*
 import kotlin.reflect.KClass
 
 data class Metadata(
@@ -38,7 +37,8 @@ data class Metadata(
     internal val headers: List<KClass<*>> = emptyList(),
     @PublishedApi
     internal val parameters: List<KClass<*>> = emptyList(),
-    internal val operationId: String? = null
+    internal val operationId: String? = null,
+    internal val pathPrefix: String? = null
 ) {
     inline fun <reified T> header(): Metadata = copy(headers = headers + T::class)
 
@@ -73,6 +73,9 @@ fun Metadata.examples(vararg pairs: Pair<String, Example>): Metadata =
 
 fun Metadata.description(description: String): Metadata =
     copy(description = description)
+
+fun Metadata.pathPrefix(prefix: String): Metadata =
+    copy(pathPrefix = prefix)
 
 fun Metadata.noReflectionBody(name: ModelName): Metadata =
     copy(bodySchema = BodySchema(name))
@@ -271,8 +274,9 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.post(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
+    val prefixedMetadata = metadata.pathPrefix(pathPrefix())
     application.swaggerUi.apply {
-        metadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
+        prefixedMetadata.apply<LOCATION, ENTITY>(HttpMethod.Post)
     }
 
     return post<LOCATION> {
@@ -285,8 +289,9 @@ inline fun <reified LOCATION : Any> Route.post(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
 ): Route {
+    val prefixedMetadata = metadata.pathPrefix(pathPrefix())
     application.swaggerUi.apply {
-        metadata.apply<LOCATION, Unit>(HttpMethod.Post)
+        prefixedMetadata.apply<LOCATION, Unit>(HttpMethod.Post)
     }
 
     return post<LOCATION> {
@@ -299,8 +304,9 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.patch(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
+    val prefixedMetadata = metadata.pathPrefix(pathPrefix())
     application.swaggerUi.apply {
-        metadata.apply<LOCATION, ENTITY>(HttpMethod.Patch)
+        prefixedMetadata.apply<LOCATION, ENTITY>(HttpMethod.Patch)
     }
 
     return patch<LOCATION> {
@@ -313,8 +319,9 @@ inline fun <reified LOCATION : Any, reified ENTITY : Any> Route.put(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION, ENTITY) -> Unit
 ): Route {
+    val prefixedMetadata = metadata.pathPrefix(pathPrefix())
     application.swaggerUi.apply {
-        metadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
+        prefixedMetadata.apply<LOCATION, ENTITY>(HttpMethod.Put)
     }
     return put<LOCATION> {
         body(this, it, call.receive())
@@ -326,8 +333,9 @@ inline fun <reified LOCATION : Any> Route.get(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
 ): Route {
+    val prefixedMetadata = metadata.pathPrefix(pathPrefix())
     application.swaggerUi.apply {
-        metadata.apply<LOCATION, Unit>(HttpMethod.Get)
+        prefixedMetadata.apply<LOCATION, Unit>(HttpMethod.Get)
     }
     return get(body)
 }
@@ -337,8 +345,33 @@ inline fun <reified LOCATION : Any> Route.delete(
     metadata: Metadata,
     noinline body: suspend PipelineContext<Unit, ApplicationCall>.(LOCATION) -> Unit
 ): Route {
+    val prefixedMetadata = metadata.pathPrefix(pathPrefix())
     application.swaggerUi.apply {
-        metadata.apply<LOCATION, Unit>(HttpMethod.Delete)
+        prefixedMetadata.apply<LOCATION, Unit>(HttpMethod.Delete)
     }
     return delete(body)
+}
+
+fun Route.pathPrefix(): String {
+    val path = when (selector) {
+        is PathSegmentConstantRouteSelector,
+        is PathSegmentOptionalParameterRouteSelector,
+        is PathSegmentParameterRouteSelector,
+        is PathSegmentTailcardRouteSelector,
+        is PathSegmentWildcardRouteSelector -> selector.toString()
+        else -> ""
+    }
+
+    return when {
+        parent == null -> "/$selector"
+        parent!!.parent == null -> parent.toString().let {
+            if (it.endsWith('/')) {
+                "$it$path/"
+            }
+            else {
+                "$it/$path/"
+            }
+        }
+        else -> "$parent/$path/"
+    }
 }

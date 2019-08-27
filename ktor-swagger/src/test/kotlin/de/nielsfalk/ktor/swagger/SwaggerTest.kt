@@ -12,6 +12,7 @@ import io.ktor.application.install
 import io.ktor.http.ContentType
 import io.ktor.locations.Location
 import io.ktor.locations.Locations
+import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.testing.withTestApplication
 import org.junit.Before
@@ -154,6 +155,15 @@ class SwaggerTest {
                         )
                 ) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
+                route("/nested") {
+                    get<toys>(
+                        "all"
+                            .responds(
+                                ok<ToysModel>(example("model", ToysModel.example)),
+                                notFound()
+                            )
+                    ) { }
+                }
             }
 
             this@SwaggerTest.swagger = application.swaggerUi.swagger!!
@@ -164,7 +174,7 @@ class SwaggerTest {
     @Test
     fun `swagger all paths have 500 response`() {
         val responses = swagger.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(7)
+        responses.should.be.size(8)
         responses.map { it as ResponseV2 }.map { it.schema?.`$ref` }.forEach {
             it.should.equal("#/definitions/ErrorModel")
         }
@@ -173,7 +183,7 @@ class SwaggerTest {
     @Test
     fun `openapi all paths have 500 response`() {
         val responses = openapi.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(7)
+        responses.should.be.size(8)
         responses.map { it as ResponseV3 }.map { it.content?.get("application/json")?.schema?.`$ref` }.forEach {
             it.should.equal("#/components/schemas/ErrorModel")
         }
@@ -340,5 +350,12 @@ class SwaggerTest {
     @Test
     fun `request type of String should create the correct bodyType for v3`() {
         (openapi.paths[toysLocation]?.get("post") as OperationV3).requestBody?.content?.keys.should.equal(setOf("text/plain"))
+    }
+
+    @Test
+    fun `nested route includes its parent path`() {
+        val responses = swagger.paths["/nested$toyLocation"]?.get("get")?.responses
+
+        responses?.keys.should.contain("200")
     }
 }

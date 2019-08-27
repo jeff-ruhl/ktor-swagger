@@ -188,6 +188,10 @@ private abstract class BaseWithVariation<B : CommonBase>(
         locationType: KClass<LOCATION>,
         bodyType: BodyType
     ) {
+        val path = when (pathPrefix) {
+            null -> location.path
+            else -> "$pathPrefix${location.path.trimStart('/')}"
+        }
 
         if (bodyType is BodyFromReflection && bodyType.typeInfo.type != Unit::class) {
             addDefinition(bodyType.typeInfo)
@@ -212,14 +216,14 @@ private abstract class BaseWithVariation<B : CommonBase>(
                         add(bodyType.bodyParameter())
                     }
                     addAll(locationType.memberProperties.map {
-                        it.toParameter(location.path).let {
+                        it.toParameter(path).let {
                             addDefinitions(it.second)
                             it.first
                         }
                     })
                     fun KClass<*>.processToParameters(parameterType: ParameterInputType) {
                         addAll(memberProperties.map {
-                            it.toParameter(location.path, parameterType).let {
+                            it.toParameter(path, parameterType).let {
                                 addDefinitions(it.second)
                                 it.first
                             }
@@ -243,7 +247,7 @@ private abstract class BaseWithVariation<B : CommonBase>(
         }
 
         base.paths
-            .getOrPut(location.path) { mutableMapOf() }
+            .getOrPut(path) { mutableMapOf() }
             .put(
                 method.value.toLowerCase(),
                 createOperation()
