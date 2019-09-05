@@ -359,12 +359,13 @@ fun Route.pathPrefix(): String {
         is PathSegmentParameterRouteSelector,
         is PathSegmentTailcardRouteSelector,
         is PathSegmentWildcardRouteSelector -> selector.toString()
-        else -> ""
+        else -> null
     }
 
     return when {
+        null == path -> ""
         parent == null -> "/$selector"
-        parent!!.parent == null -> parent.toString().let {
+        parent!!.parent == null -> parent!!.pathPrefix().let {
             if (it.endsWith('/')) {
                 "$it$path/"
             }
@@ -372,6 +373,6 @@ fun Route.pathPrefix(): String {
                 "$it/$path/"
             }
         }
-        else -> "$parent/$path/"
+        else -> "${parent!!.pathPrefix()}/$path/"
     }
 }
