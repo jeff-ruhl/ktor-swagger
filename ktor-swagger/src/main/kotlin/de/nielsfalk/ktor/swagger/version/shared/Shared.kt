@@ -33,6 +33,10 @@ class Contact(
     val email: String? = null
 )
 
+class Tag(
+    val name: String
+)
+
 interface OperationBase {
     val responses: Map<HttpStatus, ResponseBase>
     val parameters: List<ParameterBase>
@@ -84,6 +88,7 @@ class ModelOrModelReference
 internal constructor(
     val `$ref`: String? = null,
     val type: String? = null,
+    val title: String? = null,
     val format: String? = null,
     val uniqueItems: Boolean? = null,
     val items: Property? = null
@@ -150,6 +155,7 @@ data class Property(
     fun toModel(): ModelOrModelReference =
         ModelOrModelReference(
             type = type,
+            title = type,
             format = format,
             `$ref` = `$ref`,
             items = items

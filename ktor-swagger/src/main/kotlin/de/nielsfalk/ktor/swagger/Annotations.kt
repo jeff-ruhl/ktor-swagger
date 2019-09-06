@@ -17,10 +17,10 @@ annotation class Description(
 annotation class Ignore
 
 @Target(AnnotationTarget.PROPERTY)
-annotation class Schema(
-    val generator: KClass<out SchemaGenerator>
+annotation class Type(
+    val generator: KClass<out PropertyGenerator>
 )
 
-interface SchemaGenerator {
-    fun generateSchema(): Property
+interface PropertyGenerator {
+    fun generateProperty(): Property
 }

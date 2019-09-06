@@ -24,7 +24,7 @@ import java.lang.reflect.WildcardType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Date
 import kotlin.reflect.KClass
 import kotlin.reflect.KClassifier
 import kotlin.reflect.KProperty1
@@ -250,12 +250,11 @@ internal class SpecVariation(
         val collectedClassesToRegister = mutableListOf<TypeInfo>()
         val properties = typeInfo.type.memberProperties.mapNotNull {
             if (it.findAnnotation<Ignore>() != null) return@mapNotNull null
-            val rawType = it.findAnnotation<de.nielsfalk.ktor.swagger.Schema>()
+            val rawType = it.findAnnotation<de.nielsfalk.ktor.swagger.Type>()
             if (rawType != null) {
-                val property = rawType.generator.objectInstance?.generateSchema() ?: rawType.generator.createInstance().generateSchema()
+                val property = rawType.generator.objectInstance?.generateProperty() ?: rawType.generator.createInstance().generateProperty()
                 it.name to property
-            }
-            else {
+            } else {
                 val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
                 collectedClassesToRegister.addAll(propertiesWithCollected.second)
                 it.name to propertiesWithCollected.first

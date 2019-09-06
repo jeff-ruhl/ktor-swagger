@@ -22,6 +22,7 @@ import de.nielsfalk.ktor.swagger.version.shared.Paths
 import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
+import de.nielsfalk.ktor.swagger.version.shared.Tag
 import de.nielsfalk.ktor.swagger.version.v3.Example
 import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpStatusCode
@@ -33,6 +34,7 @@ class Swagger : CommonBase {
     val swagger = "2.0"
     override var info: Information? = null
     override val paths: Paths = mutableMapOf()
+    var tags: List<Tag> = emptyList()
     val definitions: Definitions = mutableMapOf()
 }
 
