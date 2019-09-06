@@ -98,7 +98,7 @@ internal class SpecVariation(
             is BodyFromReflection ->
                 parameterCreator.create(
                     typeInfo.referenceProperty(),
-                    name = "noReflectionBody",
+                    name = "body",
                     description = typeInfo.modelName(),
                     `in` = body,
                     examples = examples
@@ -106,7 +106,7 @@ internal class SpecVariation(
             is BodyFromSchema ->
                 parameterCreator.create(
                     referenceProperty(),
-                    name = "noReflectionBody",
+                    name = "body",
                     description = name,
                     `in` = body,
                     examples = examples
@@ -290,7 +290,7 @@ typealias ModelDataWithDiscoveredTypeInfo = Pair<ModelData, Collection<TypeInfo>
 
 class ModelData(val title: String, val properties: Map<PropertyName, Property>, val type: String = "object")
 
-val propertyTypes = mapOf(
+private val propertyTypes = mapOf(
     Int::class to Property("integer", "int32"),
     Long::class to Property("integer", "int64"),
     String::class to Property("string"),
@@ -301,6 +301,9 @@ val propertyTypes = mapOf(
     LocalDateTime::class to Property("string", "date-time"),
     LocalDate::class to Property("string", "date")
 ).mapKeys { it.key.qualifiedName }.mapValues { it.value to emptyList<TypeInfo>() }
+
+internal fun TypeInfo.primitivePropertyType(): Property? =
+    propertyTypes[type.qualifiedName]?.first
 
 internal fun <T, R> KProperty1<T, R>.returnTypeInfo(reifiedType: Type?): TypeInfo =
     returnType.resolveTypeInfo(reifiedType)!!

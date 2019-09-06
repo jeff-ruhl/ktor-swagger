@@ -6,6 +6,7 @@ import de.nielsfalk.ktor.swagger.JsonResponseFromReflection
 import de.nielsfalk.ktor.swagger.JsonResponseSchema
 import de.nielsfalk.ktor.swagger.collectionElementType
 import de.nielsfalk.ktor.swagger.modelName
+import de.nielsfalk.ktor.swagger.primitivePropertyType
 import de.nielsfalk.ktor.swagger.responseDescription
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
 import de.nielsfalk.ktor.swagger.version.shared.HttpStatus
@@ -70,6 +71,7 @@ class Response(
             description: String?
         ): Response {
             val collectionElementType = typeInfo.collectionElementType()
+            val primitiveProperty = typeInfo.primitivePropertyType()
             return Response(
                 description = when {
                     description != null -> description
@@ -78,14 +80,14 @@ class Response(
                 },
                 schema = when {
                     typeInfo.type == Unit::class -> null
-                    //todo: primitives
+                    null != primitiveProperty -> primitiveProperty.toModel()
                     null != collectionElementType -> ModelOrModelReference(
-                            type = "array",
-                            uniqueItems = typeInfo.type.isSubclassOf(Set::class),
-                            items = Property(`$ref` = "#/definitions/" + collectionElementType.modelName())
+                        type = "array",
+                        uniqueItems = typeInfo.type.isSubclassOf(Set::class),
+                        items = Property(`$ref` = "#/definitions/" + collectionElementType.modelName())
                     )
                     else -> ModelOrModelReference.create(
-                            "#/definitions/" + typeInfo.modelName()
+                        "#/definitions/" + typeInfo.modelName()
                     )
                 }
             )

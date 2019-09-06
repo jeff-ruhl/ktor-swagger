@@ -146,7 +146,15 @@ data class Property(
     val default: String? = null,
     val additionalProperties: Property? = null,
     override val `$ref`: String? = null
-) : RefHolder
+) : RefHolder {
+    fun toModel(): ModelOrModelReference =
+        ModelOrModelReference(
+            type = type,
+            format = format,
+            `$ref` = `$ref`,
+            items = items
+        )
+}
 
 interface RefHolder {
     val `$ref`: String?

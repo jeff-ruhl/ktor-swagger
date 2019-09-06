@@ -17,9 +17,9 @@ import io.ktor.routing.routing
 import io.ktor.server.testing.withTestApplication
 import org.junit.Before
 import org.junit.Test
+import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v2.Parameter as ParameterV2
 import de.nielsfalk.ktor.swagger.version.v2.Response as ResponseV2
-import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
 import de.nielsfalk.ktor.swagger.version.v3.Operation as OperationV3
 import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
@@ -70,6 +70,9 @@ class toySet
 
 @Location("/withParameter")
 class withParameter
+
+@Location("/primitive")
+class primitive
 
 class Header(
     val optionalHeader: String?,
@@ -175,6 +178,7 @@ class SwaggerTest {
                         )
                 ) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
+                get<primitive>("primitive".responds(ok<Int>())) {}
                 route("/nested") {
                     get<toys>(
                         "all"
@@ -194,7 +198,7 @@ class SwaggerTest {
     @Test
     fun `swagger all paths have 500 response`() {
         val responses = swagger.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(10)
+        responses.should.be.size(11)
         responses.map { it as ResponseV2 }.map { it.schema?.`$ref` }.forEach {
             it.should.equal("#/definitions/ErrorModel")
         }
@@ -203,7 +207,7 @@ class SwaggerTest {
     @Test
     fun `openapi all paths have 500 response`() {
         val responses = openapi.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(10)
+        responses.should.be.size(11)
         responses.map { it as ResponseV3 }.map { it.content?.get("application/json")?.schema?.`$ref` }.forEach {
             it.should.equal("#/components/schemas/ErrorModel")
         }
@@ -390,6 +394,16 @@ class SwaggerTest {
     @Test
     fun `request type of String should create the correct bodyType for v3`() {
         (openapi.paths[toysLocation]?.get("post") as OperationV3).requestBody?.content?.keys.should.equal(setOf("text/plain"))
+    }
+
+    @Test
+    fun `swagger primitive response type`() {
+        val response = swagger.paths["/primitive"]?.get("get")?.responses?.get("200") as ResponseV2
+        response.schema.should.not.`null`
+        response.schema!!.apply {
+            type.should.equal("integer")
+            format.should.equal("int32")
+        }
     }
 
     @Test

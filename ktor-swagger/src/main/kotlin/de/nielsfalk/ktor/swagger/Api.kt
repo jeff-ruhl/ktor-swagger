@@ -378,6 +378,6 @@ fun Route.pathPrefix(): String? {
                 else -> "$it/$path/"
             }
         }
-        else -> "${parent!!.pathPrefix()}/$path/"
+        else -> "${parent!!.pathPrefix() ?: ""}/$path/"
     }
 }
