@@ -27,10 +27,6 @@ class Information(
     val contact: Contact? = null
 )
 
-data class Tag(
-    val name: String
-)
-
 class Contact(
     val name: String? = null,
     val url: String? = null,
@@ -40,7 +36,7 @@ class Contact(
 interface OperationBase {
     val responses: Map<HttpStatus, ResponseBase>
     val parameters: List<ParameterBase>
-    val tags: List<Tag>?
+    val tags: List<String>?
     val summary: String
     val description: String?
     val security: List<Map<String, List<String>>>?
@@ -75,7 +71,7 @@ interface OperationCreator {
     fun create(
         responses: Map<HttpStatus, ResponseBase>,
         parameters: List<ParameterBase>,
-        tags: List<Tag>?,
+        tags: List<String>?,
         summary: String,
         description: String?,
         examples: Map<String, Example>,
@@ -88,7 +84,9 @@ class ModelOrModelReference
 internal constructor(
     val `$ref`: String? = null,
     val type: String? = null,
-    val format: String? = null
+    val format: String? = null,
+    val uniqueItems: Boolean? = null,
+    val items: Property? = null
 ) {
     companion object {
         fun create(modelName: String) =
@@ -146,7 +144,7 @@ data class Property(
     val items: Property? = null,
     val description: String? = null,
     val default: String? = null,
-    val additionalProperties: Map<String, Property>? = null,
+    val additionalProperties: Property? = null,
     override val `$ref`: String? = null
 ) : RefHolder
 

@@ -13,7 +13,6 @@ import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType.query
 import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.shared.PropertyName
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
-import de.nielsfalk.ktor.swagger.version.shared.Tag
 import de.nielsfalk.ktor.swagger.version.v3.Schema
 import io.ktor.application.Application
 import io.ktor.application.ApplicationCall
@@ -25,7 +24,7 @@ import java.lang.reflect.WildcardType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.Date
+import java.util.*
 import kotlin.reflect.KClass
 import kotlin.reflect.KClassifier
 import kotlin.reflect.KProperty1
@@ -46,8 +45,8 @@ val ApplicationCall.swaggerUi get() = application.swaggerUi
  */
 val Application.swaggerUi get() = feature(SwaggerSupport)
 
-fun Group.toList(): List<Tag> {
-    return listOf(Tag(name))
+fun Group.toList(): List<String> {
+    return listOf(name)
 }
 
 internal class SpecVariation(
@@ -176,8 +175,7 @@ internal class SpecVariation(
                     is KClass<*> -> valueClassifier.toModelProperty()
                     else -> unsupportedType(valueClassifier)
                 }
-                val additionalProperties = mapOf("type" to valueProperty)
-                Property(additionalProperties = additionalProperties, type = "object") to collectedTypes
+                Property(additionalProperties = valueProperty, type = "object") to collectedTypes
             } else if (java.isEnum) {
                 val enumConstants = (this).java.enumConstants
                 Property(
@@ -239,16 +237,13 @@ internal class SpecVariation(
     }
 
     fun createModelData(typeInfo: TypeInfo): ModelDataWithDiscoveredTypeInfo {
-        return if (typeInfo.type.isSubclassOf(Collection::class)) {
-            val subType = (typeInfo.reifiedType as ParameterizedType).actualTypeArguments.first() as WildcardType
-            val concreteType = subType.upperBounds[0]
-            val subTypeInfo = TypeInfo(concreteType.rawKotlinKClass(), concreteType)
-            val uniqueItems = typeInfo.type.isSubclassOf(Set::class)
-            ArrayModel(subTypeInfo.referenceProperty(), uniqueItems) to listOf(subTypeInfo)
-        } else {
-            val (properties, classesToRegister) = collectModelProperties(typeInfo)
-            ObjectModel(properties) to classesToRegister
+        val typeToRegister = when (val collectionElementType = typeInfo.collectionElementType()) {
+            null -> typeInfo
+            else -> collectionElementType
         }
+
+        val (properties, classesToRegister) = collectModelProperties(typeToRegister)
+        return ModelData(title = typeToRegister.modelName(), properties = properties) to classesToRegister
     }
 
     private fun collectModelProperties(typeInfo: TypeInfo): Pair<Map<PropertyName, Property>, MutableList<TypeInfo>> {
@@ -293,11 +288,9 @@ fun TypeInfo.responseDescription(): String = modelName()
  */
 typealias ModelDataWithDiscoveredTypeInfo = Pair<ModelData, Collection<TypeInfo>>
 
-sealed class ModelData
-class ObjectModel(val properties: Map<PropertyName, Property>) : ModelData()
-class ArrayModel(val items: Property, val uniqueItems: Boolean, val type: String = "array") : ModelData()
+class ModelData(val title: String, val properties: Map<PropertyName, Property>, val type: String = "object")
 
-private val propertyTypes = mapOf(
+val propertyTypes = mapOf(
     Int::class to Property("integer", "int32"),
     Long::class to Property("integer", "int64"),
     String::class to Property("string"),
@@ -384,6 +377,15 @@ internal fun TypeInfo.modelName(): ModelName {
         "${type.modelName()}Of$genericsName"
     }
 }
+
+internal fun TypeInfo.collectionElementType(): TypeInfo? =
+    if (type.isCollectionType) {
+        val subType = (reifiedType as ParameterizedType).actualTypeArguments.first() as WildcardType
+        val concreteType = subType.upperBounds[0]
+        TypeInfo(concreteType.rawKotlinKClass(), concreteType)
+    } else {
+        null
+    }
 
 private fun unsupportedType(type: Any?): Nothing {
     throw IllegalStateException("Unknown type ${type?.let { it::class }} $type")

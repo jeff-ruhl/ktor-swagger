@@ -4,6 +4,7 @@ import de.nielsfalk.ktor.swagger.CustomContentTypeResponse
 import de.nielsfalk.ktor.swagger.HttpCodeResponse
 import de.nielsfalk.ktor.swagger.JsonResponseFromReflection
 import de.nielsfalk.ktor.swagger.JsonResponseSchema
+import de.nielsfalk.ktor.swagger.collectionElementType
 import de.nielsfalk.ktor.swagger.modelName
 import de.nielsfalk.ktor.swagger.responseDescription
 import de.nielsfalk.ktor.swagger.version.shared.CommonBase
@@ -20,10 +21,10 @@ import de.nielsfalk.ktor.swagger.version.shared.Paths
 import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
-import de.nielsfalk.ktor.swagger.version.shared.Tag
 import de.nielsfalk.ktor.swagger.version.v3.Example
 import io.ktor.client.call.TypeInfo
 import io.ktor.http.HttpStatusCode
+import kotlin.reflect.full.isSubclassOf
 
 typealias Definitions = MutableMap<ModelName, Any>
 
@@ -68,15 +69,25 @@ class Response(
             typeInfo: TypeInfo,
             description: String?
         ): Response {
+            val collectionElementType = typeInfo.collectionElementType()
             return Response(
                 description = when {
                     description != null -> description
                     typeInfo.type == Unit::class -> httpStatusCode.description
                     else -> typeInfo.responseDescription()
                 },
-                schema = if (typeInfo.type == Unit::class) null else ModelOrModelReference.create(
-                    "#/definitions/" + typeInfo.modelName()
-                )
+                schema = when {
+                    typeInfo.type == Unit::class -> null
+                    //todo: primitives
+                    null != collectionElementType -> ModelOrModelReference(
+                            type = "array",
+                            uniqueItems = typeInfo.type.isSubclassOf(Set::class),
+                            items = Property(`$ref` = "#/definitions/" + collectionElementType.modelName())
+                    )
+                    else -> ModelOrModelReference.create(
+                            "#/definitions/" + typeInfo.modelName()
+                    )
+                }
             )
         }
 
@@ -94,7 +105,7 @@ class Response(
 class Operation(
     override val responses: Map<HttpStatus, ResponseBase>,
     override val parameters: List<ParameterBase>,
-    override val tags: List<Tag>?,
+    override val tags: List<String>?,
     override val summary: String,
     override val description: String?,
     override val security: List<Map<String, List<String>>>?,
@@ -106,7 +117,7 @@ class Operation(
         override fun create(
             responses: Map<HttpStatus, ResponseBase>,
             parameters: List<ParameterBase>,
-            tags: List<Tag>?,
+            tags: List<String>?,
             summary: String,
             description: String?,
             examples: Map<String, Example>,

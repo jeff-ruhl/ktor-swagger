@@ -62,6 +62,12 @@ const val toyLocation = "/toys"
 @Location(toyLocation)
 class toys
 
+@Location("/toysList")
+class toyList
+
+@Location("/toysSet")
+class toySet
+
 @Location("/withParameter")
 class withParameter
 
@@ -154,6 +160,20 @@ class SwaggerTest {
                             notFound()
                         )
                 ) { }
+                get<toyList>(
+                    "all"
+                        .responds(
+                            ok<List<ToyModel>>(),
+                            notFound()
+                        )
+                ) { }
+                get<toySet>(
+                    "all"
+                        .responds(
+                            ok<Set<ToyModel>>(),
+                            notFound()
+                        )
+                ) { }
                 get<withParameter>("with parameter".responds(ok<Unit>()).parameter<QueryParameter>().header<Header>()) {}
                 route("/nested") {
                     get<toys>(
@@ -174,7 +194,7 @@ class SwaggerTest {
     @Test
     fun `swagger all paths have 500 response`() {
         val responses = swagger.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(8)
+        responses.should.be.size(10)
         responses.map { it as ResponseV2 }.map { it.schema?.`$ref` }.forEach {
             it.should.equal("#/definitions/ErrorModel")
         }
@@ -183,7 +203,7 @@ class SwaggerTest {
     @Test
     fun `openapi all paths have 500 response`() {
         val responses = openapi.paths.flatMap { it.value.values }.mapNotNull { it.responses["500"] }
-        responses.should.be.size(8)
+        responses.should.be.size(10)
         responses.map { it as ResponseV3 }.map { it.content?.get("application/json")?.schema?.`$ref` }.forEach {
             it.should.equal("#/components/schemas/ErrorModel")
         }
@@ -241,6 +261,26 @@ class SwaggerTest {
     }
 
     @Test
+    fun `swagger get list of toys`() {
+        val responses = swagger.paths.get("/toysList")?.get("get")!!.responses
+        (responses["200"] as ResponseV2).schema!!.apply {
+            type.should.equal("array")
+            uniqueItems.should.`false`
+            items!!.`$ref`.should.equal("#/definitions/ToyModel")
+        }
+    }
+
+    @Test
+    fun `swagger get set of toys`() {
+        val responses = swagger.paths.get("/toysSet")?.get("get")!!.responses
+        (responses["200"] as ResponseV2).schema!!.apply {
+            type.should.equal("array")
+            uniqueItems.should.`true`
+            items!!.`$ref`.should.equal("#/definitions/ToyModel")
+        }
+    }
+
+    @Test
     fun `openapi get toys operation with examples`() {
         val operation = (openapi.paths.get(toyLocation)?.get("get") as OperationV3)
         operation.responses["200"]
@@ -257,14 +297,14 @@ class SwaggerTest {
     fun `swagger put toy operation with tag`() {
         val tags = swagger.paths.get(toysLocation)?.get("put")?.tags
 
-        tags?.map { it.name }.should.equal(listOf("toy"))
+        tags?.should!!.equal(listOf("toy"))
     }
 
     @Test
     fun `openapi put toy operation with tag`() {
         val tags = openapi.paths.get(toysLocation)?.get("put")?.tags
 
-        tags?.map { it.name }.should.equal(listOf("toy"))
+        tags?.should!!.equal(listOf("toy"))
     }
 
     @Test
@@ -304,7 +344,7 @@ class SwaggerTest {
 
     @Test
     fun `ToysModel with array properties`() {
-        val toys = (swagger.definitions.get("ToysModel") as? ObjectModel)?.properties?.get("toys") as Property
+        val toys = (swagger.definitions.get("ToysModel") as? ModelData)?.properties?.get("toys") as Property
 
         toys.type.should.equal("array")
         val items = toys.items as Property

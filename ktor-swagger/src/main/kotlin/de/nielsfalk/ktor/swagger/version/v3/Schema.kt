@@ -19,7 +19,6 @@ import de.nielsfalk.ktor.swagger.version.shared.Paths
 import de.nielsfalk.ktor.swagger.version.shared.Property
 import de.nielsfalk.ktor.swagger.version.shared.ResponseBase
 import de.nielsfalk.ktor.swagger.version.shared.ResponseCreator
-import de.nielsfalk.ktor.swagger.version.shared.Tag
 import io.ktor.client.call.TypeInfo
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
@@ -194,7 +193,7 @@ class MediaTypeObject(
 class Operation(
     override val responses: Map<HttpStatus, ResponseBase>,
     override val parameters: List<Parameter>,
-    override val tags: List<Tag>?,
+    override val tags: List<String>?,
     override val summary: String,
     override val description: String?,
     override val security: List<Map<String, List<String>>>?,
@@ -206,7 +205,7 @@ class Operation(
         override fun create(
             responses: Map<HttpStatus, ResponseBase>,
             parameters: List<ParameterBase>,
-            tags: List<Tag>?,
+            tags: List<String>?,
             summary: String,
             description: String?,
             examples: Map<String, Example>,

@@ -20,10 +20,16 @@ import io.ktor.locations.get
 import io.ktor.locations.patch
 import io.ktor.locations.post
 import io.ktor.locations.put
+import io.ktor.request.receive
+import io.ktor.routing.PathSegmentConstantRouteSelector
+import io.ktor.routing.PathSegmentOptionalParameterRouteSelector
+import io.ktor.routing.PathSegmentParameterRouteSelector
+import io.ktor.routing.PathSegmentTailcardRouteSelector
+import io.ktor.routing.PathSegmentWildcardRouteSelector
+import io.ktor.routing.Route
+import io.ktor.routing.application
 import io.ktor.util.pipeline.ContextDsl
 import io.ktor.util.pipeline.PipelineContext
-import io.ktor.request.receive
-import io.ktor.routing.*
 import kotlin.reflect.KClass
 
 data class Metadata(
@@ -74,7 +80,7 @@ fun Metadata.examples(vararg pairs: Pair<String, Example>): Metadata =
 fun Metadata.description(description: String): Metadata =
     copy(description = description)
 
-fun Metadata.pathPrefix(prefix: String): Metadata =
+fun Metadata.pathPrefix(prefix: String?): Metadata =
     copy(pathPrefix = prefix)
 
 fun Metadata.noReflectionBody(name: ModelName): Metadata =
@@ -352,7 +358,7 @@ inline fun <reified LOCATION : Any> Route.delete(
     return delete(body)
 }
 
-fun Route.pathPrefix(): String {
+fun Route.pathPrefix(): String? {
     val path = when (selector) {
         is PathSegmentConstantRouteSelector,
         is PathSegmentOptionalParameterRouteSelector,
@@ -363,14 +369,13 @@ fun Route.pathPrefix(): String {
     }
 
     return when {
-        null == path -> ""
+        null == path -> null
         parent == null -> "/$selector"
         parent!!.parent == null -> parent!!.pathPrefix().let {
-            if (it.endsWith('/')) {
-                "$it$path/"
-            }
-            else {
-                "$it/$path/"
+            when {
+                it == null -> "/$path/"
+                it.endsWith('/') -> "$it$path/"
+                else -> "$it/$path/"
             }
         }
         else -> "${parent!!.pathPrefix()}/$path/"
