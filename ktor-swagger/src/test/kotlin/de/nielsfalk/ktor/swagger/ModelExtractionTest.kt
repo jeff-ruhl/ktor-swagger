@@ -338,7 +338,7 @@ class ModelExtractionTest {
 
     @Test
     fun `nested map type`() {
-        val (model, discovered) = createModelData(typeInfo<NestedMapType>())
+        val (model, discovered) = openApiVariation.createModelData(typeInfo<NestedMapType>())
         assertEqualTypeInfo(
             typeInfo<Property>(),
             discovered.first()
@@ -350,7 +350,7 @@ class ModelExtractionTest {
         }
         model.properties["nestedObjectMap"]!!.additionalProperties!!.apply {
             type.should.`null`
-            `$ref`.should.equal("#/definitions/Property")
+            `$ref`.should.equal("#/components/schemas/Property")
         }
     }
 
@@ -449,8 +449,15 @@ class ModelExtractionTest {
         assertEqualTypeInfo(typeInfo<Int>(), jValueType)
         assertEqualTypeInfo(typeInfo<String>(), kValueType)
     }
+
+    object CustomTypeGenerator : PropertyGenerator {
+        override fun generateProperty(): Property {
+            return Property(type = "string", enum = listOf("all", "day", "long"))
+        }
+    }
+
     class CustomSchema(
-        @Type("string")
+        @Type(generator = CustomTypeGenerator::class)
         val field1: Any
     )
 
@@ -461,6 +468,7 @@ class ModelExtractionTest {
 
         model.properties["field1"]!!.apply {
             type.should.equal("string")
+            enum.should.elements("all", "day", "long")
         }
     }
 }
