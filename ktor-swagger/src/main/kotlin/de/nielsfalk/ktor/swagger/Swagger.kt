@@ -251,8 +251,8 @@ internal class SpecVariation(
         val collectedClassesToRegister = mutableListOf<TypeInfo>()
         val properties = typeInfo.type.memberProperties
             .filter {
-                (it.findAnnotation<Ignore>() == null)
-                    && !(typeInfo.type.isSubclassOf(Throwable::class) && throwableFields.contains(it.name))
+                (it.findAnnotation<Ignore>() == null) &&
+                    !(typeInfo.type.isSubclassOf(Throwable::class) && throwableFields.contains(it.name))
             }
             .map {
                 val rawType = it.findAnnotation<de.nielsfalk.ktor.swagger.Type>()
