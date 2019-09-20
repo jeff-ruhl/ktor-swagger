@@ -9,11 +9,11 @@ import de.nielsfalk.ktor.swagger.created
 import de.nielsfalk.ktor.swagger.delete
 import de.nielsfalk.ktor.swagger.description
 import de.nielsfalk.ktor.swagger.example
-import de.nielsfalk.ktor.swagger.operationId
 import de.nielsfalk.ktor.swagger.examples
 import de.nielsfalk.ktor.swagger.get
 import de.nielsfalk.ktor.swagger.notFound
 import de.nielsfalk.ktor.swagger.ok
+import de.nielsfalk.ktor.swagger.operationId
 import de.nielsfalk.ktor.swagger.patch
 import de.nielsfalk.ktor.swagger.post
 import de.nielsfalk.ktor.swagger.put
@@ -155,7 +155,6 @@ internal fun run(port: Int, wait: Boolean = true): ApplicationEngine {
         }
         install(Locations)
         install(SwaggerSupport) {
-            forwardRoot = true
             val information = Information(
                 version = "0.1",
                 title = "sample api implemented in ktor",

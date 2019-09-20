@@ -9,19 +9,12 @@ import de.nielsfalk.ktor.swagger.version.shared.ParameterInputType
 import de.nielsfalk.ktor.swagger.version.v2.Swagger
 import de.nielsfalk.ktor.swagger.version.v3.OpenApi
 import io.ktor.application.Application
-import io.ktor.application.ApplicationCall
 import io.ktor.application.ApplicationFeature
-import io.ktor.application.call
 import io.ktor.client.call.TypeInfo
 import io.ktor.client.call.typeInfo
 import io.ktor.http.HttpMethod
 import io.ktor.locations.Location
-import io.ktor.response.respond
-import io.ktor.response.respondRedirect
-import io.ktor.routing.get
-import io.ktor.routing.routing
 import io.ktor.util.AttributeKey
-import io.ktor.util.pipeline.PipelineContext
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberProperties
 import de.nielsfalk.ktor.swagger.version.v2.Operation as OperationV2
@@ -33,67 +26,28 @@ import de.nielsfalk.ktor.swagger.version.v3.Response as ResponseV3
 
 class SwaggerSupport(
     val swagger: Swagger?,
-    val swaggerCustomization: Metadata.(HttpMethod) -> Metadata,
+    private val swaggerCustomization: Metadata.(HttpMethod) -> Metadata,
     val openApi: OpenApi?,
-    val openApiCustomization: Metadata.(HttpMethod) -> Metadata
+    private val openApiCustomization: Metadata.(HttpMethod) -> Metadata
 ) {
     companion object Feature : ApplicationFeature<Application, SwaggerUiConfiguration, SwaggerSupport> {
-        private val openApiJsonFileName = "openapi.json"
-        private val swaggerJsonFileName = "swagger.json"
-
         internal val swaggerVariation = SpecVariation("#/definitions/", ResponseV2, OperationV2, ParameterV2)
         internal val openApiVariation = SpecVariation("#/components/schemas/", ResponseV3, OperationV3, ParameterV3)
 
         override val key = AttributeKey<SwaggerSupport>("SwaggerSupport")
 
         override fun install(pipeline: Application, configure: SwaggerUiConfiguration.() -> Unit): SwaggerSupport {
-            val (path,
-                forwardRoot,
-                provideUi,
-                swagger,
+            val (swagger,
                 openApi,
                 swaggerConfig,
-                openpapiConfig
+                openApiConfig
             ) = SwaggerUiConfiguration().apply(configure)
-            val feature = SwaggerSupport(swagger, swaggerConfig, openApi, openpapiConfig)
-
-            val defaultJsonFile = when {
-                openApi != null -> openApiJsonFileName
-                swagger != null -> swaggerJsonFileName
-                else -> throw IllegalArgumentException("Swagger or OpenApi must be specified")
-            }
-            pipeline.routing {
-                get("/$path") {
-                    redirect(path, defaultJsonFile)
-                }
-                val ui = if (provideUi) SwaggerUi() else null
-                get("/$path/{fileName}") {
-                    val filename = call.parameters["fileName"]
-                    if (filename == swaggerJsonFileName && swagger != null) {
-                        call.respond(swagger)
-                    } else if (filename == openApiJsonFileName && openApi != null) {
-                        call.respond(openApi)
-                    } else {
-                        ui?.serve(filename, call)
-                    }
-                }
-                if (forwardRoot) {
-
-                    get("/") {
-                        redirect(path, defaultJsonFile)
-                    }
-                }
-            }
-            return feature
-        }
-
-        private suspend fun PipelineContext<Unit, ApplicationCall>.redirect(path: String, defaultJsonFile: String) {
-            call.respondRedirect("/$path/index.html?url=./$defaultJsonFile")
+            return SwaggerSupport(swagger, swaggerConfig, openApi, openApiConfig)
         }
     }
 
-    val commons: Collection<CommonBase> =
-        listOf(swagger, openApi).filterNotNull()
+    private val commons: Collection<CommonBase> =
+        listOfNotNull(swagger, openApi)
 
     private val variations: Collection<BaseWithVariation<out CommonBase>>
         get() = commons.map {
@@ -300,9 +254,6 @@ private abstract class BaseWithVariation<B : CommonBase>(
 }
 
 data class SwaggerUiConfiguration(
-    var path: String = "apidocs",
-    var forwardRoot: Boolean = false,
-    var provideUi: Boolean = true,
     var swagger: Swagger? = null,
     var openApi: OpenApi? = null,
     /**
