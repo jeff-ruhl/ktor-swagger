@@ -246,20 +246,26 @@ internal class SpecVariation(
         return ModelData(title = typeToRegister.modelName(), properties = properties) to classesToRegister
     }
 
+    private val throwableFields = setOf("message", "cause")
     private fun collectModelProperties(typeInfo: TypeInfo): Pair<Map<PropertyName, Property>, MutableList<TypeInfo>> {
         val collectedClassesToRegister = mutableListOf<TypeInfo>()
-        val properties = typeInfo.type.memberProperties.mapNotNull {
-            if (it.findAnnotation<Ignore>() != null) return@mapNotNull null
-            val rawType = it.findAnnotation<de.nielsfalk.ktor.swagger.Type>()
-            if (rawType != null) {
-                val property = rawType.generator.objectInstance?.generateProperty() ?: rawType.generator.createInstance().generateProperty()
-                it.name to property
-            } else {
-                val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
-                collectedClassesToRegister.addAll(propertiesWithCollected.second)
-                it.name to propertiesWithCollected.first
+        val properties = typeInfo.type.memberProperties
+            .filter {
+                (it.findAnnotation<Ignore>() == null)
+                    && !(typeInfo.type.isSubclassOf(Throwable::class) && throwableFields.contains(it.name))
             }
-        }.toMap()
+            .map {
+                val rawType = it.findAnnotation<de.nielsfalk.ktor.swagger.Type>()
+                if (rawType != null) {
+                    val property = rawType.generator.objectInstance?.generateProperty()
+                        ?: rawType.generator.createInstance().generateProperty()
+                    it.name to property
+                } else {
+                    val propertiesWithCollected = it.toModelProperty(typeInfo.reifiedType)
+                    collectedClassesToRegister.addAll(propertiesWithCollected.second)
+                    it.name to propertiesWithCollected.first
+                }
+            }.toMap()
 
         return properties to collectedClassesToRegister
     }

@@ -471,6 +471,18 @@ class ModelExtractionTest {
             enum.should.elements("all", "day", "long")
         }
     }
+
+    class ValidationError(val field: String, val error: String) : Throwable()
+
+    @Test
+    fun `Throwable fields are excluded`() {
+        val typeInfo = typeInfo<ValidationError>()
+        val model = createModelData(typeInfo).first
+
+        model.properties.should.size(2)
+        model.properties["field"]!!.type.should.equal("string")
+        model.properties["error"]!!.type.should.equal("string")
+    }
 }
 
 fun assertEqualTypeInfo(expected: TypeInfo, actual: TypeInfo) {
