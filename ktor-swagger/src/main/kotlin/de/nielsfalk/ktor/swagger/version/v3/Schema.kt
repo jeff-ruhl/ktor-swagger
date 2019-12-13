@@ -271,7 +271,6 @@ class Parameter(
     val deprecated: Boolean = false,
     val allowEmptyValue: Boolean = true,
     val schema: Property,
-    val example: Any? = null,
     val examples: Map<String, Example>? = null
 ) : ParameterBase {
     companion object : ParameterCreator {

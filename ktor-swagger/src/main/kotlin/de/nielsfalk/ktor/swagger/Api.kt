@@ -190,7 +190,7 @@ data class CustomContentTypeResponse(val contentType: ContentType) : ResponseTyp
 }
 
 /**
- * The type of the operation body being recived by the server.
+ * The type of the operation body being received by the server.
  */
 sealed class BodyType {
     abstract val examples: Map<String, Example>
