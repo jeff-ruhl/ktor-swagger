@@ -103,7 +103,6 @@ class Response(
                 "application/json" to
                     MediaTypeObject(
                         ModelOrModelReference.create("#/components/schemas/" + name),
-                        example = examples.values.firstOrNull()?.value,
                         examples = examples
                     )
             }
@@ -116,7 +115,6 @@ class Response(
                 jsonContent?.let {
                     "application/json" to MediaTypeObject(
                         it,
-                        example = examples.values.firstOrNull()?.value,
                         examples = examples
                     )
                 }
@@ -154,7 +152,6 @@ class Response(
                 mapOf(
                     "application/json" to MediaTypeObject(
                         it,
-                        example = examples.values.firstOrNull()?.value,
                         examples = examples
                     )
                 )
@@ -175,7 +172,6 @@ class Response(
                     "application/json" to
                         MediaTypeObject(
                             ModelOrModelReference.create("#/components/schemas/" + modelName),
-                            example = examples.values.firstOrNull()?.value,
                             examples = examples
                         )
                 )
@@ -186,7 +182,6 @@ class Response(
 
 class MediaTypeObject(
     val schema: ModelOrModelReference,
-    val example: Any? = null,
     val examples: Map<String, Example> = mapOf()
 )
 
@@ -231,7 +226,6 @@ class Operation(
                                     ModelOrModelReference(
                                             type = "string"
                                     ),
-                                    example = examples.values.firstOrNull()?.value,
                                     examples = examples
                             )
                     )
@@ -240,7 +234,6 @@ class Operation(
                             ModelOrModelReference(
                                 `$ref` = it.schema.`$ref`!!
                             ),
-                            example = examples.values.firstOrNull()?.value,
                             examples = examples
                         )
                     )
